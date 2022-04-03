@@ -68,38 +68,42 @@ public class Star : MonoBehaviour
 
     void spawnRandomMatterInRandomPosition()
     {
-        // find open space and spawn a proton
-        // first determine if spawn should happen in top half or bottom half or mid
-        // rng is weighted 75% to spawn top half 15% bottom 10% mid
-        int rInt = Random.Range(0, 100);
-        // rowsFrom/rowsTo defaults to top half
-        int rowsFrom = 0;
-        int rowsTo = ((this.gridSize - 1) / 2) - 1;
+        if (!this.hasOpenSpaces()) {
+            this.endGame();
+        } else {
+            // find open space and spawn a proton
+            // first determine if spawn should happen in top half or bottom half or mid
+            // rng is weighted 75% to spawn top half 15% bottom 10% mid
+            int rInt = Random.Range(0, 100);
+            // rowsFrom/rowsTo defaults to top half
+            int rowsFrom = 0;
+            int rowsTo = ((this.gridSize - 1) / 2) - 1;
 
-        if (rInt > 75 && rInt <= 90) {
-            rowsFrom = ((this.gridSize - 1) / 2) + 1;
-            rowsTo = this.gridSize - 1;
-        } else if (rInt > 90) {
-            rowsFrom = ((this.gridSize - 1) / 2);
-            rowsTo = ((this.gridSize - 1) / 2);
+            if (rInt > 75 && rInt <= 90) {
+                rowsFrom = ((this.gridSize - 1) / 2) + 1;
+                rowsTo = this.gridSize - 1;
+            } else if (rInt > 90) {
+                rowsFrom = ((this.gridSize - 1) / 2);
+                rowsTo = ((this.gridSize - 1) / 2);
+            }
+
+            List<int[]> openColumns = this.openSpaces(rowsFrom, rowsTo, 0, this.gridSize-1);
+
+            if (openColumns.Count == 0) {
+                // no open spots, try again?
+                this.spawnRandomMatterInRandomPosition();
+            } else {
+                int index = Random.Range(0, openColumns.Count);
+
+                // spawn protons 95% of the time
+                int spawnIndex = 0;
+                if (Random.Range(0, 100) >= 95) {
+                    spawnIndex = 1;
+                }
+                Matter newMatter = Instantiate(this.spawnableMatter[spawnIndex], new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Matter>();
+                this.spawnMatter(newMatter, openColumns[index][0], openColumns[index][1]);
+            }
         }
-
-        List<int[]> openColumns = this.openSpaces(rowsFrom, rowsTo, 0, this.gridSize-1);
-
-        if (openColumns.Count == 0) {
-            // no open spots, try again?
-            this.spawnRandomMatterInRandomPosition();
-        }
-
-        int index = Random.Range(0, openColumns.Count);
-
-        // spawn protons 95% of the time
-        int spawnIndex = 0;
-        if (Random.Range(0, 100) >= 95) {
-            spawnIndex = 1;
-        }
-        Matter newMatter = Instantiate(this.spawnableMatter[spawnIndex], new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Matter>();
-        this.spawnMatter(newMatter, openColumns[index][0], openColumns[index][1]);
     }
 
     void spawnMatter(Matter matter, int x, int y)
@@ -133,6 +137,12 @@ public class Star : MonoBehaviour
     {
         if (!this.gameOver) {
             this.energyText.GetComponent<TMPro.TextMeshProUGUI>().text = this.energy.ToString();
+            if (Input.GetKeyUp(KeyCode.LeftArrow) || Input.GetKeyUp(KeyCode.A)) {
+                this.Rotate(false);
+            } else if (Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.D)) {
+                this.Rotate(true);
+            }
+
             if (this.updateGame) {
                 this.redrawMatterInGrid();
                 this.Fall();
@@ -273,7 +283,6 @@ public class Star : MonoBehaviour
 
     void Push(Matter matter, int x, int y, int directionX, int directionY)
     {
-        Debug.Log("push");
         // move the item into the cell in the direction
         // if cell is past edge delete matter
         // if cell is occupied call fuse

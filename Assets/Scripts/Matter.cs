@@ -9,8 +9,6 @@ public class Matter : MonoBehaviour
 
     public void Fuse()
     {
-        Debug.Log("Destroy:" + this.name);
-
         DestroyImmediate(gameObject);
     }
 }
