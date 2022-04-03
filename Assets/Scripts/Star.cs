@@ -143,21 +143,64 @@ public class Star : MonoBehaviour
                     }
                 }
             }
-
             this.grid = rotated;
-            this.redrawMatterInGrid();
-            this.Fall();
-            this.Decay();
+        }
+    }
+
+    void betweenRotate()
+    {
+        bool somethingFell = this.Fall();
+        bool somethingDecayed = this.Decay();
+        if (somethingFell || somethingDecayed) {
             this.spawnRandomMatterInRandomPosition();
-            this.redrawMatterInGrid();
-            this.OutputGridToConsole();
             if (this.nextDrop <= 0) {
                 this.coreDensity -= 1;
                 this.nextDrop = this.dropCoreTime;
             }
             this.nextDrop -= 1;
-            this.checkGameOver();
         }
+    }
+
+    void afterRotate()
+    {
+        this.redrawMatterInGrid();
+        this.OutputGridToConsole();
+        this.checkGameOver();
+    }
+
+    void moveUp() {
+        // rotate 180
+        this.Rotate(true);
+        this.Rotate(true);
+        // fall
+        this.betweenRotate();
+        // roate 180
+        this.Rotate(false);
+        this.Rotate(false);
+        this.afterRotate();
+    }
+    void moveLeft() {
+        // rotate -90
+        this.Rotate(false);
+        // fall
+        this.betweenRotate();
+        // rotate 90
+        this.Rotate(true);
+        this.afterRotate();
+    }
+    void moveRight() {
+        // rotate 90
+        this.Rotate(true);
+        // fall
+        this.betweenRotate();
+        // rotate -90
+        this.Rotate(false);
+        this.afterRotate();
+    }
+    void moveDown() {
+        // fall
+        this.betweenRotate();
+        this.afterRotate();
     }
 
     void Update()
@@ -166,9 +209,13 @@ public class Star : MonoBehaviour
             this.energyText.GetComponent<TMPro.TextMeshProUGUI>().text = this.energy.ToString();
             this.densityText.GetComponent<TMPro.TextMeshProUGUI>().text = this.coreDensity.ToString();
             if (Input.GetKeyUp(KeyCode.LeftArrow) || Input.GetKeyUp(KeyCode.A)) {
-                this.Rotate(false);
+                this.moveLeft();
             } else if (Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.D)) {
-                this.Rotate(true);
+                this.moveRight();
+            } else if (Input.GetKeyUp(KeyCode.UpArrow) || Input.GetKeyUp(KeyCode.W)) {
+                this.moveUp();
+            } else if (Input.GetKeyUp(KeyCode.DownArrow) || Input.GetKeyUp(KeyCode.S)) {
+                this.moveDown();
             }
         }
     }
@@ -196,8 +243,9 @@ public class Star : MonoBehaviour
         UnityEngine.SceneManagement.SceneManager.LoadScene(0);
     }
 
-    void Fall()
+    bool Fall()
     {
+        bool somethingFell = false;
         for (int i = this.gridSize-2; i >= 0; i--) {
             for (int j = 0; j < this.gridSize; j++) {
                 if (this.grid[i, j] is Matter) {
@@ -214,6 +262,7 @@ public class Star : MonoBehaviour
                             }
                         }
                         if (lowestOpen != i) {
+                            somethingFell = true;
                             // move to lowestOpen position
                             this.grid[lowestOpen, j] = this.grid[i, j];
                             this.grid[i, j] = null;
@@ -221,8 +270,10 @@ public class Star : MonoBehaviour
 
                         if (lowestOpen + 1 < this.gridSize && this.grid[lowestOpen+1, j] is Matter) {
                             if (this.combiner.canCombine(new string[2]{this.grid[lowestOpen, j].name, this.grid[lowestOpen+1, j].name})) {
+                                somethingFell = true;
                                 this.Fuse(new Matter[2]{this.grid[lowestOpen, j], this.grid[lowestOpen+1, j]}, lowestOpen, j, lowestOpen+1, j);
                             } else if (this.grid[lowestOpen, j].name == "helium-4" && this.grid[lowestOpen+1, j].name == "core") {
+                                somethingFell = true;
                                 this.grid[lowestOpen, j].Fuse();
                                 this.grid[lowestOpen, j] = null;
                                 this.coreDensity += 1;
@@ -232,6 +283,8 @@ public class Star : MonoBehaviour
                 }
             }
         }
+
+        return somethingFell;
     }
 
     void causeCme(int x, int y)
@@ -313,12 +366,14 @@ public class Star : MonoBehaviour
     }
 
     // Go through grid and decay matter that can decay
-    void Decay()
+    bool Decay()
     {
+        bool somethingDecayed = false;
         for (int i = this.gridSize-1; i >= 0; i--) {
             for (int j = 0; j < this.gridSize; j++) {
                 if (this.grid[i, j] is Matter) {
                     if (this.combiner.canDecay(this.grid[i, j]) && this.grid[i, j].decayTime <= 0) {
+                        somethingDecayed = true;
                         this.Fuse(new Matter[1]{this.grid[i, j]}, -1, -1, i, j);
                     } else {
                         this.grid[i, j].decayTime -= 1;
@@ -326,6 +381,8 @@ public class Star : MonoBehaviour
                 }
             }
         }
+
+        return somethingDecayed;
     }
 
     void Push(Matter matter, int x, int y, int directionX, int directionY)
