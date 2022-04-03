@@ -48,7 +48,6 @@ MonoBehaviour:
   - proton
   outputMatter:
   - {fileID: 1416949591836768564, guid: 041cebb10eb15454a819005d36deb2b3, type: 3}
-  - {fileID: 4938166664690516549, guid: d8b0a624dd2bd9240809e94136a05f8f, type: 3}
   inputEnergy: 0
   outputEnergy: 26
   requiredTemperature: 0

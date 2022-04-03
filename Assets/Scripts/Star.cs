@@ -6,6 +6,9 @@ public class Star : MonoBehaviour
 {
     [SerializeField] private float temperature;
     [SerializeField] private float energy;
+    [SerializeField] private int coreDensity;
+    [SerializeField] private int dropCoreTime;
+    [SerializeField] private int nextDrop;
     [SerializeField] private int gridSize;
     [SerializeField] private Matter[,] grid;
     [SerializeField] private int[,] spiralCoordinates;
@@ -14,6 +17,7 @@ public class Star : MonoBehaviour
     [SerializeField] private GameObject corePrefab;
     [SerializeField] private GameObject cellPrefab;
     [SerializeField] private GameObject energyText;
+    [SerializeField] private GameObject densityText;
     [SerializeField] private AudioSource fusionAudio;
     [SerializeField] private GameObject rotateButtons;
     [SerializeField] private GameObject gameOverScreen;
@@ -93,15 +97,29 @@ public class Star : MonoBehaviour
             } else {
                 int index = Random.Range(0, openColumns.Count);
 
-                // spawn protons 95% of the time
+                // spawn protons 90% of the time
                 int spawnIndex = 0;
-                if (Random.Range(0, 100) >= 95) {
+                if (Random.Range(0, 100) >= 90 && this.electronCount() < 3) {
                     spawnIndex = 1;
                 }
                 Matter newMatter = Instantiate(this.spawnableMatter[spawnIndex], new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Matter>();
                 this.spawnMatter(newMatter, openColumns[index][0], openColumns[index][1]);
             }
         }
+    }
+
+    int electronCount()
+    {
+        int electronAmount = 0;
+        for (int i = 0; i < this.gridSize; ++i) {
+            for (int j = 0; j < this.gridSize; ++j) {
+                if (this.grid[i, j] is Matter && this.grid[i, j].name == "electron") {
+                    electronAmount += 1;
+                }
+            }
+        }
+        Debug.Log("electrons: " + electronAmount);
+        return electronAmount;
     }
 
     void spawnMatter(Matter matter, int x, int y)
@@ -133,9 +151,12 @@ public class Star : MonoBehaviour
             this.spawnRandomMatterInRandomPosition();
             this.redrawMatterInGrid();
             this.OutputGridToConsole();
-            if (!this.hasOpenSpaces()) {
-                this.endGame();
+            if (this.nextDrop <= 0) {
+                this.coreDensity -= 1;
+                this.nextDrop = this.dropCoreTime;
             }
+            this.nextDrop -= 1;
+            this.checkGameOver();
         }
     }
 
@@ -143,6 +164,7 @@ public class Star : MonoBehaviour
     {
         if (!this.gameOver) {
             this.energyText.GetComponent<TMPro.TextMeshProUGUI>().text = this.energy.ToString();
+            this.densityText.GetComponent<TMPro.TextMeshProUGUI>().text = this.coreDensity.ToString();
             if (Input.GetKeyUp(KeyCode.LeftArrow) || Input.GetKeyUp(KeyCode.A)) {
                 this.Rotate(false);
             } else if (Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.D)) {
@@ -151,6 +173,17 @@ public class Star : MonoBehaviour
         }
     }
 
+    void checkGameOver() {
+        if (!this.hasOpenSpaces()) {
+            this.endGame();
+        }
+        if (this.coreDensity <= 0) {
+            this.endGame();
+        }
+        if (this.coreDensity >= 100) {
+            this.endGame();
+        }
+    }
     void endGame()
     {
         this.gameOver = true;
@@ -189,6 +222,10 @@ public class Star : MonoBehaviour
                         if (lowestOpen + 1 < this.gridSize && this.grid[lowestOpen+1, j] is Matter) {
                             if (this.combiner.canCombine(new string[2]{this.grid[lowestOpen, j].name, this.grid[lowestOpen+1, j].name})) {
                                 this.Fuse(new Matter[2]{this.grid[lowestOpen, j], this.grid[lowestOpen+1, j]}, lowestOpen, j, lowestOpen+1, j);
+                            } else if (this.grid[lowestOpen, j].name == "helium-4" && this.grid[lowestOpen+1, j].name == "core") {
+                                this.grid[lowestOpen, j].Fuse();
+                                this.grid[lowestOpen, j] = null;
+                                this.coreDensity += 1;
                             }
                         }
                     }
@@ -301,6 +338,9 @@ public class Star : MonoBehaviour
             if (this.grid[x + directionX, y + directionY] is Matter) {
                 if (this.combiner.canCombine(new string[2]{this.grid[x, y].name, this.grid[x + directionX, y + directionY].name})) {
                     this.Fuse(new Matter[2]{temp, this.grid[x + directionX, y + directionY]}, x, y, x + directionX, y + directionY);
+                }else if (this.grid[x + directionX, y + directionY].name == "core") {
+                    this.grid[x, y] = matter;
+                    temp.Fuse();
                 } else {
                     this.grid[x, y] = matter;
                     this.Push(temp, x+directionX, y+directionY, directionX, directionY);
