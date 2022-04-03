@@ -11,7 +11,7 @@ public class Fusion : MonoBehaviour
 
     [SerializeField] private float inputEnergy;
 
-    [SerializeField] private float outputEnergy;
+    [SerializeField] public float outputEnergy;
 
     [SerializeField] private int requiredTemperature;
 

@@ -41,4 +41,16 @@ public class Combiner : MonoBehaviour
 
         return results;
     }
+
+    public float resultEnergy(string[] matter) {
+        float energy = 0;
+        foreach (Fusion fusion in fusions)
+        {
+            if (fusion.inputMatches(matter) && (matter.Length > 1 || (matter.Length == 1 && fusion.isDecay()))) {
+                energy = fusion.outputEnergy;
+            }
+        }
+
+        return energy;
+    }
 }

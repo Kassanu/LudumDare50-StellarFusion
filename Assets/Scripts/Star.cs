@@ -13,8 +13,15 @@ public class Star : MonoBehaviour
     [SerializeField] private GameObject[] spawnableMatter;
     [SerializeField] private GameObject corePrefab;
     [SerializeField] private GameObject cellPrefab;
+    [SerializeField] private GameObject energyText;
+    [SerializeField] private AudioSource fusionAudio;
+    [SerializeField] private GameObject rotateButtons;
+    [SerializeField] private GameObject gameOverScreen;
+
 
     private bool updateGame = false;
+
+    private bool gameOver = false;
 
     // Start is called before the first frame update
     void Start()
@@ -86,9 +93,9 @@ public class Star : MonoBehaviour
 
         int index = Random.Range(0, openColumns.Count);
 
-        // spawn protons 90% of the time
+        // spawn protons 95% of the time
         int spawnIndex = 0;
-        if (Random.Range(0, 100) >= 90) {
+        if (Random.Range(0, 100) >= 95) {
             spawnIndex = 1;
         }
         Matter newMatter = Instantiate(this.spawnableMatter[spawnIndex], new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Matter>();
@@ -102,35 +109,55 @@ public class Star : MonoBehaviour
 
     public void Rotate(bool clockwise)
     {
-        Matter[,] rotated = new Matter[this.gridSize, this.gridSize];
+        if (!this.gameOver) {
+            Matter[,] rotated = new Matter[this.gridSize, this.gridSize];
 
-        for (int i = 0; i < this.gridSize; ++i) {
-            for (int j = 0; j < this.gridSize; ++j) {
-                // 90
-                if (clockwise) {
-                    rotated[i, j] = this.grid[this.gridSize - j - 1, i];
-                } else {
-                // -90
-                    rotated[i, j] = this.grid[j, this.gridSize - i - 1];
+            for (int i = 0; i < this.gridSize; ++i) {
+                for (int j = 0; j < this.gridSize; ++j) {
+                    // 90
+                    if (clockwise) {
+                        rotated[i, j] = this.grid[this.gridSize - j - 1, i];
+                    } else {
+                    // -90
+                        rotated[i, j] = this.grid[j, this.gridSize - i - 1];
+                    }
                 }
             }
-        }
 
-        this.grid = rotated;
-        this.updateGame = true;
+            this.grid = rotated;
+            this.updateGame = true;
+        }
     }
 
     void Update()
     {
-        if (this.updateGame) {
-            this.redrawMatterInGrid();
-            this.Fall();
-            this.Decay();
-            this.spawnRandomMatterInRandomPosition();
-            this.redrawMatterInGrid();
-            this.OutputGridToConsole();
-            this.updateGame = false;
+        if (!this.gameOver) {
+            this.energyText.GetComponent<TMPro.TextMeshProUGUI>().text = this.energy.ToString();
+            if (this.updateGame) {
+                this.redrawMatterInGrid();
+                this.Fall();
+                this.Decay();
+                this.spawnRandomMatterInRandomPosition();
+                this.redrawMatterInGrid();
+                this.OutputGridToConsole();
+                if (!this.hasOpenSpaces()) {
+                    this.endGame();
+                }
+                this.updateGame = false;
+            }
         }
+    }
+
+    void endGame()
+    {
+        this.gameOver = true;
+        this.rotateButtons.SetActive(false);
+        this.gameOverScreen.SetActive(true);
+    }
+
+    public void restartGame()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
     }
 
     void Fall()
@@ -140,11 +167,14 @@ public class Star : MonoBehaviour
                 if (this.grid[i, j] is Matter) {
                     if (this.grid[i, j].canMove) {
                         int lowestOpen = i;
-                        for (int k = i; k < this.gridSize; k++) {
-                            if (!(this.grid[k, j] is Matter)) {
+                        bool hit = false;
+                        for (int k = lowestOpen+1; k < this.gridSize; k++) {
+                            if (!hit && !(this.grid[k, j] is Matter)) {
                                 if (lowestOpen < k) {
                                     lowestOpen = k;
                                 }
+                            } else if (this.grid[k, j] is Matter) {
+                                hit = true;
                             }
                         }
                         if (lowestOpen != i) {
@@ -173,6 +203,8 @@ public class Star : MonoBehaviour
         }
         GameObject[] result = this.combiner.result(matterNames);
         if (result != null) {
+            this.fusionAudio.Play(0);
+            this.energy += this.combiner.resultEnergy(matterNames);
             Matter merged = Instantiate(result[0], new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Matter>();
             this.spawnMatter(merged, intoX, intoY);
             if (fromX != -1 && fromY != -1) {
@@ -207,18 +239,17 @@ public class Star : MonoBehaviour
                             int spawnIndex = Random.Range(0, open.Count);
                             int directionX = intoX - open[spawnIndex][0];
                             if (directionX > 0) {
-                                directionX = -1;
-                            } else if (directionX < 0) {
                                 directionX = 1;
+                            } else if (directionX < 0) {
+                                directionX = -1;
                             }
                             int directionY = intoY - open[spawnIndex][1];
                             if (directionY > 0) {
-                                directionY = -1;
-                            } else if (directionY < 0) {
                                 directionY = 1;
+                            } else if (directionY < 0) {
+                                directionY = -1;
                             }
-                            this.Push(open[spawnIndex][0], open[spawnIndex][1], directionX, directionY);
-                            this.grid[open[spawnIndex][0], open[spawnIndex][1]] = mergedOther;
+                            this.Push(mergedOther, open[spawnIndex][0], open[spawnIndex][1], directionX, directionY);
                         }
                     }
                 }
@@ -240,17 +271,31 @@ public class Star : MonoBehaviour
         }
     }
 
-    void Push(int x, int y, int directionX, int directionY)
+    void Push(Matter matter, int x, int y, int directionX, int directionY)
     {
+        Debug.Log("push");
         // move the item into the cell in the direction
         // if cell is past edge delete matter
         // if cell is occupied call fuse
-        if (x + directionX < this.gridSize && x + directionX > 0 && y + directionY < this.gridSize && y + directionY > 0) {
-            if (this.grid[x + directionX, y + directionY] is Matter & this.combiner.canCombine(new string[2]{this.grid[x, y].name, this.grid[x + directionX, y + directionY].name})) {
-                this.Fuse(new Matter[2]{this.grid[x, y], this.grid[x + directionX, y + directionY]}, x, y, x + directionX, y + directionY);
+        Matter temp = this.grid[x,y];
+        if (this.inBounds(x+directionX, y+directionY)) {
+            if (this.grid[x + directionX, y + directionY] is Matter) {
+                if (this.combiner.canCombine(new string[2]{this.grid[x, y].name, this.grid[x + directionX, y + directionY].name})) {
+                    this.Fuse(new Matter[2]{temp, this.grid[x + directionX, y + directionY]}, x, y, x + directionX, y + directionY);
+                } else {
+                    this.grid[x, y] = matter;
+                    this.Push(temp, x+directionX, y+directionY, directionX, directionY);
+                }
+            } else {
+                // space is empty can push everything
+                // push and drop matter into spot
+                this.grid[x, y] = matter;
+                this.Push(temp, x+directionX, y+directionY, directionX, directionY);
             }
         } else {
             // delete
+            this.grid[x, y] = matter;
+            temp.Fuse();
         }
     }
 
@@ -262,7 +307,7 @@ public class Star : MonoBehaviour
         {
             for (int j = colsFrom; j <= colsTo; j++)
             {
-                if (i < this.gridSize && j < this.gridSize && this.grid[i, j] == null) {
+                if (this.inBounds(i, j) && this.grid[i, j] == null) {
                     open.Add(new int[2] {i, j});
                 }
             }
@@ -337,7 +382,7 @@ public class Star : MonoBehaviour
     }
 
     bool inBounds(int x, int y) {
-        return x < this.gridSize && x >= 0 && y < this.gridSize && y >= 0;
+        return x < this.gridSize && x >= 0 && y < this.gridSize && y >= 0 && (x != ((this.gridSize/2)-1) && x != ((this.gridSize/2)-1));
     }
 
     void OutputGridToConsole()
