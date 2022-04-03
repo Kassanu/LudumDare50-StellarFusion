@@ -17,7 +17,7 @@ public class Star : MonoBehaviour
     [SerializeField] private AudioSource fusionAudio;
     [SerializeField] private GameObject rotateButtons;
     [SerializeField] private GameObject gameOverScreen;
-
+    [SerializeField] private GameObject[] cmes;
 
     private bool updateGame = false;
 
@@ -204,6 +204,21 @@ public class Star : MonoBehaviour
         }
     }
 
+    void causeCme(int x, int y)
+    {
+        if (x < 0) {
+            // top
+            this.cmes[0].GetComponent<ParticleSystem>().Play();
+        } else if (x >= this.gridSize) {
+            // bottom
+            this.cmes[1].GetComponent<ParticleSystem>().Play();
+        } else if (y < 0) {
+            this.cmes[2].GetComponent<ParticleSystem>().Play();
+        } else if (y >= this.gridSize) {
+            this.cmes[3].GetComponent<ParticleSystem>().Play();
+        }
+    }
+
     void Fuse(Matter[] matter, int fromX, int fromY, int intoX, int intoY)
     {
         string[] matterNames = new string[matter.Length];
@@ -304,6 +319,7 @@ public class Star : MonoBehaviour
         } else {
             // delete
             this.grid[x, y] = matter;
+            this.causeCme(x+directionX, y+directionY);
             temp.Fuse();
         }
     }
