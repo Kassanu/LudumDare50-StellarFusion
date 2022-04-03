@@ -99,9 +99,9 @@ public class Star : MonoBehaviour
 
                 // spawn protons 90% of the time
                 int spawnIndex = 0;
-                if (Random.Range(0, 100) >= 90 && this.electronCount() < 3) {
-                    spawnIndex = 1;
-                }
+                // if (Random.Range(0, 100) >= 90 && this.electronCount() < 3) {
+                //     spawnIndex = 1;
+                // }
                 Matter newMatter = Instantiate(this.spawnableMatter[spawnIndex], new Vector3(0, 0, 0), Quaternion.identity).GetComponent<Matter>();
                 this.spawnMatter(newMatter, openColumns[index][0], openColumns[index][1]);
             }
