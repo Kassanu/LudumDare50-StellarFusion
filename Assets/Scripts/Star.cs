@@ -19,8 +19,6 @@ public class Star : MonoBehaviour
     [SerializeField] private GameObject gameOverScreen;
     [SerializeField] private GameObject[] cmes;
 
-    private bool updateGame = false;
-
     private bool gameOver = false;
 
     // Start is called before the first frame update
@@ -129,7 +127,15 @@ public class Star : MonoBehaviour
             }
 
             this.grid = rotated;
-            this.updateGame = true;
+            this.redrawMatterInGrid();
+            this.Fall();
+            this.Decay();
+            this.spawnRandomMatterInRandomPosition();
+            this.redrawMatterInGrid();
+            this.OutputGridToConsole();
+            if (!this.hasOpenSpaces()) {
+                this.endGame();
+            }
         }
     }
 
@@ -141,19 +147,6 @@ public class Star : MonoBehaviour
                 this.Rotate(false);
             } else if (Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.D)) {
                 this.Rotate(true);
-            }
-
-            if (this.updateGame) {
-                this.redrawMatterInGrid();
-                this.Fall();
-                this.Decay();
-                this.spawnRandomMatterInRandomPosition();
-                this.redrawMatterInGrid();
-                this.OutputGridToConsole();
-                if (!this.hasOpenSpaces()) {
-                    this.endGame();
-                }
-                this.updateGame = false;
             }
         }
     }
@@ -288,8 +281,10 @@ public class Star : MonoBehaviour
         for (int i = this.gridSize-1; i >= 0; i--) {
             for (int j = 0; j < this.gridSize; j++) {
                 if (this.grid[i, j] is Matter) {
-                    if (this.combiner.canDecay(this.grid[i, j])) {
+                    if (this.combiner.canDecay(this.grid[i, j]) && this.grid[i, j].decayTime <= 0) {
                         this.Fuse(new Matter[1]{this.grid[i, j]}, -1, -1, i, j);
+                    } else {
+                        this.grid[i, j].decayTime -= 1;
                     }
                 }
             }

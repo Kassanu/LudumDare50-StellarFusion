@@ -47,6 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   name: beryllium-8
   canMove: 1
+  decayTime: 1
 --- !u!1 &1402427006379042171
 GameObject:
   m_ObjectHideFlags: 0

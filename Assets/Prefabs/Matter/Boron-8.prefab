@@ -254,6 +254,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   name: boron-8
   canMove: 1
+  decayTime: 1
 --- !u!1 &5902732591099816855
 GameObject:
   m_ObjectHideFlags: 0
