@@ -29073,7 +29073,8 @@ MonoBehaviour:
       m_Calls: []
     m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-  m_text: 'Slide elements into each other to cause reactions and create new elements.
+  m_text: 'Use the arrow keys to slide elements into each other to cause reactions
+    and create new elements.
 
 
     Helium-4 will be absorbed into the core. Increasing the core''s mass will lead
@@ -29161,11 +29162,11 @@ MonoBehaviour:
     lineCount: 12
     pageCount: 1
     materialCount: 1
-  m_havePropertiesChanged: 0
+  m_havePropertiesChanged: 1
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_spriteAnimator: {fileID: 0}
-  m_isInputParsingRequired: 0
+  m_isInputParsingRequired: 1
   m_inputSource: 0
   m_hasFontAssetChanged: 0
   m_subTextObjects:
